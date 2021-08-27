@@ -4,11 +4,16 @@ const Lyrics = require("genius-lyrics-api");
 const paginationEmbed = require("discordjs-button-pagination");
 
 module.exports = {
-  name: "lyrics",
-  alias: [],
-  description: "get lyrics for a song!",
+  name: "start",
+  alias: ["sing"],
+  description: "Start Singing!",
   async execute(message, args, cmd, client, Discord) {
-    if(!args[0]) return message.channel.send("You need to specify a song which you need lyrics for");
+    if(!args[0]) return message.channel.send("You need to specify a song to sing!");
+    if(!args[1]) return message.channel.send("You need to how to warn a user, if in case they sing wrong!");
+    if(args[1].toLowerCase() != "dm" && args[1].toLowerCase() != "direct") return message.channel.send("Second argument should be either `dm` or `direct`");
+
+    const warntype = args[1].toLowerCase();
+
     const options = {
       apiKey: process.env.LYRICSAPI,
       title: args.join(" "),
@@ -95,6 +100,21 @@ module.exports = {
       ];
 
       paginationEmbed(message, pages, buttonList, 60000);
+
     }
+
+    await new Promise(resolve => {
+      setTimeout(resolve, 3000);
+    });
+    const embed = new Discord.MessageEmbed()
+      .setDescription(`Everyone get ready for the Discord sings of **${searchresult[selected].title}**\n` + "Starting in at about `5` seconds!");
+    message.channel.send({ embeds: [embed] });
+
+    await new Promise(resolve => {
+      setTimeout(resolve, 5000);
+    });
+    const embed2 = new Discord.MessageEmbed()
+      .setDescription(`Discord sings of **${searchresult[selected].title}** has started!!\n`);
+    message.channel.send({ embeds: [embed2] });
   }
 };
