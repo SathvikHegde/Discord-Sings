@@ -21,8 +21,6 @@
     "discord.js": "^13.1.0",
     "discordjs-button-pagination": "^1.0.7",
     "dotenv": "^10.0.0",
-    "genius-lyrics": "^4.2.9",
-    "genius-lyrics-api": "^3.0.6",
-    "solenolyrics": "^5.0.0"
+    "genius-lyrics-api": "^3.0.6"
   }
 }

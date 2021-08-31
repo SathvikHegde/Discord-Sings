@@ -8,15 +8,16 @@ module.exports = {
   alias: ["sing"],
   description: "Start Singing!",
   async execute(message, args, cmd, client, Discord) {
-    if(!args[0]) return message.channel.send("You need to specify a song to sing!");
-    if(!args[1]) return message.channel.send("You need to how to warn a user, if in case they sing wrong!");
-    if(args[1].toLowerCase() != "dm" && args[1].toLowerCase() != "direct") return message.channel.send("Second argument should be either `dm` or `direct`");
+    if(!args[0]) return message.channel.send("You need to how to warn a user, if in case they sing wrong!");
+    if(args[0].toLowerCase() != "dm" && args[0].toLowerCase() != "direct") return message.channel.send("First argument should be either `dm` or `direct`");
+    if(!args[1]) return message.channel.send("You need to specify a song to sing!");
 
-    const warntype = args[1].toLowerCase();
+    const warntype = args[0].toLowerCase();
+    const searchquery = args.slice(1).join(" ");
 
     const options = {
       apiKey: process.env.LYRICSAPI,
-      title: args.join(" "),
+      title: searchquery,
       artist: "",
       optimizeQuery: true
     };
@@ -26,7 +27,7 @@ module.exports = {
     if(searchresult == "Not Found") {
       const searchembed = new Discord.MessageEmbed()
         .setColor("RED")
-        .setDescription(`**No results found for "${args.join(" ")}"**`);
+        .setDescription(`**No results found for "${searchquery}"**`);
 
       return message.channel.send({ embeds: [searchembed]});
     }
@@ -38,7 +39,7 @@ module.exports = {
 
       const searchembed = new Discord.MessageEmbed()
         .setColor("GREEN")
-        .setTitle(`Search Results for "${args.join(" ")}"`)
+        .setTitle(`Search Results for "${searchquery}"`)
         .setDescription(`1. ${searchresult[0].title}\n2. ${searchresult[1].title}\n3. ${searchresult[2].title}\n4. ${searchresult[3].title}\n5. ${searchresult[4].title}\n`);
 
       const searchmessage = await message.channel.send({ embeds: [searchembed]});
@@ -107,14 +108,42 @@ module.exports = {
       setTimeout(resolve, 3000);
     });
     const embed = new Discord.MessageEmbed()
-      .setDescription(`Everyone get ready for the Discord sings of **${searchresult[selected].title}**\n` + "Starting in at about `5` seconds!");
+      .setDescription(`Everyone get ready for the Discord sings of **${searchresult[selected].title}**\n` + "Starting in at about `5` seconds!")
+      .setColor("YELLOW");
     message.channel.send({ embeds: [embed] });
 
+    const songarray = await song.lyrics.split("\n");
+
+    for (let i = songarray.length; i--;) {
+      if(songarray[i].includes("[")) songarray.splice(i, 1);
+      if(songarray[i] == "") songarray.splice(i, 1);
+    }
+    console.log(songarray);
+
     await new Promise(resolve => {
-      setTimeout(resolve, 5000);
+      setTimeout(resolve, 4000);
     });
     const embed2 = new Discord.MessageEmbed()
-      .setDescription(`Discord sings of **${searchresult[selected].title}** has started!!\n`);
+      .setDescription(`Discord sings of **${searchresult[selected].title}** has started!!\n`)
+      .setColor("GREEN");
     message.channel.send({ embeds: [embed2] });
+
+    for (let index = 0; index < songarray.length; index++) {
+      message.channel.awaitMessages({time: 200000, errors: ["time"] })
+        .then(async collected => {
+          const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g;
+          if(collected.content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
+            collected.delete();
+            const warnmsg = await message.channel.send(`<@${collected.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+            await new Promise(resolve => {
+              setTimeout(resolve, 10000);
+            });
+            warnmsg.delete();
+          }
+        })
+        .catch(() => {
+          return message.channel.send(`<@${message.author.id}> you didn't replied on time.`);
+        });
+    }
   }
 };
