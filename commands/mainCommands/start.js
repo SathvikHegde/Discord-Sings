@@ -129,21 +129,20 @@ module.exports = {
     message.channel.send({ embeds: [embed2] });
 
     for (let index = 0; index < songarray.length; index++) {
-      message.channel.awaitMessages({time: 200000, errors: ["time"] })
-        .then(async collected => {
-          const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g;
-          if(collected.content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
-            collected.delete();
-            const warnmsg = await message.channel.send(`<@${collected.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
-            await new Promise(resolve => {
-              setTimeout(resolve, 10000);
-            });
-            warnmsg.delete();
-          }
-        })
+      const filter = m => m.author.id != client.user.id;
+      const collected = await message.channel.awaitMessages({filter, time: 200000, max: 1, errors: ["time"] })
         .catch(() => {
           return message.channel.send(`<@${message.author.id}> you didn't replied on time.`);
         });
+      const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g;
+      if(collected.first().content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
+        collected.delete();
+        const warnmsg = await message.channel.send(`<@${collected.first().author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+        await new Promise(resolve => {
+          setTimeout(resolve, 10000);
+        });
+        warnmsg.delete();
+      }
     }
   }
 };
