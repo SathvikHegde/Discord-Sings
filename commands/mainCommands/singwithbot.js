@@ -6,8 +6,8 @@ const paginationEmbed = require("discordjs-button-pagination");
 const { Collector } = require("discord.js");
 
 module.exports = {
-  name: "start",
-  alias: ["sing"],
+  name: "singwithbot",
+  alias: ["startwithbot"],
   description: "Start Singing!",
   async execute(message, args, cmd, client, Discord) {
     if(!args[0]) return message.channel.send("You need to how to warn a user, if in case they sing wrong!");
@@ -131,83 +131,120 @@ module.exports = {
     message.channel.send({ embeds: [embed2] });
 
     let lastsung = 0;
+    let finished = false;
     let index = 0;
     let hold = false;
 
     const filter = m => m.author.id != client.user.id;
-    const collector = message.channel.createMessageCollector({filter, time: 300000});
+    const collector = message.channel.createMessageCollector({ filter, time: 300000 });
 
     const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g;
 
-    await new Promise(resolve => {
-      collector.on("collect", async m => {
-        if(m.content.toLowerCase() == "unhold") {
-          m.delete().catch(err => console.log(err));
-          if(hold == false) {
-            const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold isn't active.`);
+    while(!finished) {
+      console.log("hu");
+      await new Promise(resolve => {
+        collector.on("collect", async m =>{
+          console.log("J");
+          if(m.content.toLowerCase() == "unhold") {
+            m.delete().catch(err => console.log(err));
+            if(hold == false) {
+              const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold isn't active.`);
+              setTimeout(function() {
+                sentmsg.delete();
+              }, 5000);
+            } else {
+              const sentmsg = await message.channel.send(`<@${m.author.id}> Hold has been removed.`);
+              setTimeout(function() {
+                sentmsg.delete();
+              }, 5000);
+              hold = false;
+            }
+            return finished = false;
+          } else if(m.content.toLowerCase() == "hold") {
+            m.delete().catch(err => console.log(err));
+            if(hold == true) {
+              const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold is already active.`);
+              setTimeout(function() {
+                sentmsg.delete();
+              }, 5000);
+            } else {
+              const sentmsg = await message.channel.send(`<@${m.author.id}> Hold has been activated.`);
+              setTimeout(function() {
+                sentmsg.delete();
+              }, 5000);
+              hold = true;
+            }
+            return finished = false;
+          } else if(m.content.toLowerCase() == "end") {
+            message.channel.send(`<@${m.author.id}> Discord Sings has been ended.`);
+            return finished = true;
+          } else if(lastsung == m.author.id) {
+            m.delete().catch(err => console.log(err));
+            const sentmsg = await message.channel.send(`<@${m.author.id}> You can't sing twice in a row.`);
             setTimeout(function() {
               sentmsg.delete();
             }, 5000);
+            return finished = false;
+          } else if(hold) {
+            return finished = false;
+          } else if(m.content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
+            m.delete().catch(err => console.log(err));
+            if(warntype == "dm") {
+              m.author.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+            } else if(warntype == "direct") {
+              const warnmsg = await message.channel.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+              setTimeout(function() {
+                warnmsg.delete();
+              }, 10000);
+            }
+            return finished = false;
           } else {
-            const sentmsg = await message.channel.send(`<@${m.author.id}> Hold has been removed.`);
-            setTimeout(function() {
-              sentmsg.delete();
-            }, 5000);
-            hold = false;
+            if(index < songarray.length) {
+              index++;
+              lastsung = m.author.id;
+              collector.resetTimer();
+              return finished = false;
+            } else if(index == songarray.length) {
+              return finished = true;
+            }
           }
-        } else if(m.content.toLowerCase() == "hold") {
-          m.delete().catch(err => console.log(err));
-          if(hold == true) {
-            const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold is already active.`);
-            setTimeout(function() {
-              sentmsg.delete();
-            }, 5000);
-          } else {
-            const sentmsg = await message.channel.send(`<@${m.author.id}> Hold has been activated.`);
-            setTimeout(function() {
-              sentmsg.delete();
-            }, 5000);
-            hold = true;
-          }
-        } else if(m.content.toLowerCase() == "end") {
-          message.channel.send(`<@${m.author.id}> Discord Sings has been ended.`);
-          collector.stop("manual");
-          resolve();
-        } else if(lastsung == m.author.id) {
-          m.delete().catch(err => console.log(err));
-          const sentmsg = await message.channel.send(`<@${m.author.id}> You can't sing twice in a row.`);
-          setTimeout(function() {
-            sentmsg.delete();
-          }, 5000);
-        } else if(hold) {
-          return;
-        } else if(m.content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
-          console.log("dud");
-          m.delete().catch(err => console.log(err));
-          if(warntype == "dm") {
-            m.author.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
-          } else if(warntype == "direct") {
-            const warnmsg = await message.channel.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
-            setTimeout(function() {
-              warnmsg.delete();
-            }, 10000);
-          }
-        } else {
-          if(index < songarray.length) {
-            index++;
-            lastsung = m.author.id;
-            collector.resetTimer();
-          } else if(index == songarray.length) {
-            resolve();
-          }
-        }
+          resolve;
+        });
       });
-
-      collector.on("end", (collected, reason) => {
-        if(reason != "manual") message.channel.send("Discord Sings has been ended because no one responded on time.");
-        resolve();
-      });
-    });
+    }
     message.channel.send("Finished");
+
+
+    /*for (let index = 0; index < songarray.length; index++) {
+      async function receivemessage() {
+        const filter = m => m.author.id != client.user.id;
+        const receivemsg = await message.channel.awaitMessages({filter, time: 200000, max: 1, errors: ["time"] })
+          .catch(() => {
+            return message.channel.send("Discord Sings has been eneded because no one replied");
+          });
+        return receivemsg;
+      }
+
+      const collected = await receivemessage();
+
+      if(lastsung == collected.first().author.id) {
+        collected.delete();
+        const warnmsg = await message.channel.send(`<@${collected.first().author.id}> You can't sing twice in a row.`);
+        await new Promise(resolve => {
+          setTimeout(resolve, 10000);
+        });
+        warnmsg.delete();
+      }
+      lastsung = collected.first().author.id;
+      const regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g;
+      if(collected.first().content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
+        collected.delete();
+        const warnmsg = await message.channel.send(`<@${collected.first().author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+        await new Promise(resolve => {
+          setTimeout(resolve, 10000);
+        });
+        warnmsg.delete();
+      }
+    }*/
   }
 };
