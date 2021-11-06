@@ -22,5 +22,8 @@
     "discordjs-button-pagination": "^1.0.7",
     "dotenv": "^10.0.0",
     "genius-lyrics-api": "^3.0.6"
+  },
+  "devDependencies": {
+    "eslint": "^8.2.0"
   }
 }

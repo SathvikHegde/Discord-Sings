@@ -4,13 +4,16 @@ const Lyrics = require("genius-lyrics-api");
 const paginationEmbed = require("discordjs-button-pagination");
 
 module.exports = {
-  name: "singwithbot",
-  alias: ["startwithbot"],
-  description: "sing with bot",
+  name: "sing",
+  alias: ["start"],
+  description: "Start Singing!",
   async execute(message, args, cmd, client, Discord) {
-    if(!args[0]) return message.channel.send("You need to specify a song to sing!");
+    if(!args[0]) return message.channel.send("You need to how to warn a user, if in case they sing wrong!");
+    if(args[0].toLowerCase() != "dm" && args[0].toLowerCase() != "direct") return message.channel.send("First argument should be either `dm` or `direct`");
+    if(!args[1]) return message.channel.send("You need to specify a song to sing!");
 
-    const searchquery = args.join(" ");
+    const warntype = args[0].toLowerCase();
+    const searchquery = args.slice(1).join(" ");
 
     const options = {
       apiKey: process.env.LYRICSAPI,
@@ -125,6 +128,7 @@ module.exports = {
       .setColor("GREEN");
     message.channel.send({ embeds: [embed2] });
 
+    let lastsung = 0;
     let index = 0;
     let hold = false;
 
@@ -135,7 +139,7 @@ module.exports = {
 
     await new Promise(resolve => {
       collector.on("collect", async m => {
-        if(m.content.toLowerCase() == "unhold" && m.author.id == message.author.id) {
+        if(m.content.toLowerCase() == "unhold") {
           m.delete().catch(err => console.log(err));
           if(hold == false) {
             const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold isn't active.`);
@@ -149,7 +153,7 @@ module.exports = {
             }, 5000);
             hold = false;
           }
-        } else if(m.content.toLowerCase() == "hold" && m.author.id == message.author.id) {
+        } else if(m.content.toLowerCase() == "hold") {
           m.delete().catch(err => console.log(err));
           if(hold == true) {
             const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold is already active.`);
@@ -163,28 +167,33 @@ module.exports = {
             }, 5000);
             hold = true;
           }
-        } else if(m.content.toLowerCase() == "end" && m.author.id == message.author.id) {
+        } else if(m.content.toLowerCase() == "end") {
           message.channel.send(`<@${m.author.id}> Discord Sings has been ended.`);
           collector.stop("manual");
           resolve();
+        } else if(lastsung == m.author.id) {
+          m.delete().catch(err => console.log(err));
+          const sentmsg = await message.channel.send(`<@${m.author.id}> You can't sing twice in a row.`);
+          setTimeout(function() {
+            sentmsg.delete();
+          }, 5000);
         } else if(hold) {
           return;
         } else if(m.content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
           console.log("dud");
           m.delete().catch(err => console.log(err));
-          const warnmsg = await message.channel.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`).catch(() => {});
-          setTimeout(function() {
-            warnmsg.delete();
-          }, 10000);
+          if(warntype == "dm") {
+            m.author.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+          } else if(warntype == "direct") {
+            const warnmsg = await message.channel.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
+            setTimeout(function() {
+              warnmsg.delete();
+            }, 10000);
+          }
         } else {
           if(index < songarray.length) {
             index++;
-            message.channel.send(songarray[index]).catch(() => {});
-            if(index < songarray.length) {
-              index++;
-            } else {
-              resolve();
-            }
+            lastsung = m.author.id;
             collector.resetTimer();
           } else if(index == songarray.length) {
             resolve();
