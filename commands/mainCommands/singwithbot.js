@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const Logger = require("../../utils/logging.js");
+
 const Lyrics = require("genius-lyrics-api");
 const paginationEmbed = require("discordjs-button-pagination");
 
@@ -60,6 +62,8 @@ module.exports = {
     }
 
     const song = await Lyrics.getSongById(songID, process.env.LYRICSAPI);
+
+    Logger.started(client, message.guild, searchresult[selected].title, "Sing With Bot", "None");
 
     if(song.lyrics.length <= 1000) {
       const embed = new Discord.MessageEmbed()
@@ -136,7 +140,7 @@ module.exports = {
     await new Promise(resolve => {
       collector.on("collect", async m => {
         if(m.content.toLowerCase() == "unhold" && m.author.id == message.author.id) {
-          m.delete().catch(err => console.log(err));
+          m.delete().catch(err => Logger.logError(client, err, message.guild));
           if(hold == false) {
             const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold isn't active.`);
             setTimeout(function() {
@@ -150,7 +154,7 @@ module.exports = {
             hold = false;
           }
         } else if(m.content.toLowerCase() == "hold" && m.author.id == message.author.id) {
-          m.delete().catch(err => console.log(err));
+          m.delete().catch(err => Logger.logError(client, err, message.guild));
           if(hold == true) {
             const sentmsg = await message.channel.send(`<@${m.author.id}> What are you trying to do? Hold is already active.`);
             setTimeout(function() {
@@ -166,20 +170,21 @@ module.exports = {
         } else if(m.content.toLowerCase() == "end" && m.author.id == message.author.id) {
           message.channel.send(`<@${m.author.id}> Discord Sings has been ended.`);
           collector.stop("manual");
+          Logger.ended(client, message.guild, searchresult[selected].title, "Sing With Bot", "None", "Manual");
           resolve();
         } else if(hold) {
           return;
         } else if(m.content.toLowerCase().replace(regex, "") != songarray[index].toLowerCase().replace(regex, "")) {
           console.log("dud");
-          m.delete().catch(err => console.log(err));
-          const warnmsg = await message.channel.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`).catch(() => {});
+          m.delete().catch(err => Logger.logError(client, err, message.guild));
+          const warnmsg = await message.channel.send(`<@${m.author.id}> You sent the wrong lyric! The correct one is **${songarray[index]}**`);
           setTimeout(function() {
             warnmsg.delete();
           }, 10000);
         } else {
           if(index < songarray.length) {
             index++;
-            message.channel.send(songarray[index]).catch(() => {});
+            message.channel.send(songarray[index]).catch(err => Logger.logError(client, err, message.guild));
             if(index < songarray.length) {
               index++;
             } else {
@@ -194,9 +199,11 @@ module.exports = {
 
       collector.on("end", (collected, reason) => {
         if(reason != "manual") message.channel.send("Discord Sings has been ended because no one responded on time.");
+        Logger.ended(client, message.guild, searchresult[selected].title, "Sing With Bot", "None", "No one responded on time");
         resolve();
       });
     });
     message.channel.send("Discord Sings has finished");
+    Logger.ended(client, message.guild, searchresult[selected].title, "Sing With Bot", "None", "Suscessfully Finished");
   }
 };
